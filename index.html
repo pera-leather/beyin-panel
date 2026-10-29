@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Beyin Paneli</title>
+<meta name="theme-color" content="#5c1a24">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+:root{
+  --paper:#f2f1ec; --surface:#ffffff; --ink:#1e2420; --muted:#5d655f; --line:#d9d8d0;
+  --oxblood:#5c1a24; --oxblood-soft:#f3e6e7; --thread:#b8902a; --ok:#3f6131; --ok-soft:#e5eedf;
+  --warn:#9a4a12; --warn-soft:#f8ebde; --bad:#9b2c22; --focus:#2d5fa8;
+  --display:"Bricolage Grotesque",system-ui,sans-serif; --body:"Source Sans 3",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#161a17; --surface:#1f2420; --ink:#ecebe5; --muted:#a3aaa4; --line:#343b36;
+  --oxblood:#d98b95; --oxblood-soft:#3a2226; --thread:#d6b250; --ok:#9cc78a; --ok-soft:#24301f;
+  --warn:#e6a36a; --warn-soft:#3a2a1c; --bad:#ef8a7e; --focus:#8fb4ff;
+}}
+:root[data-theme="dark"]{
+  --paper:#161a17; --surface:#1f2420; --ink:#ecebe5; --muted:#a3aaa4; --line:#343b36;
+  --oxblood:#d98b95; --oxblood-soft:#3a2226; --thread:#d6b250; --ok:#9cc78a; --ok-soft:#24301f;
+  --warn:#e6a36a; --warn-soft:#3a2a1c; --bad:#ef8a7e; --focus:#8fb4ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:17px/1.5 var(--body);-webkit-font-smoothing:antialiased;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0}
+a{color:var(--oxblood)}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* Üst bar */
+.top{background:var(--oxblood);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .top{background:#2a1418}}
+:root[data-theme="dark"] .top{background:#2a1418}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:56px}
+.brand{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:-.01em;margin-right:auto;color:#fff;text-decoration:none}
+.who{font-size:15px;opacity:.85}
+.top button{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:4px 10px;font-size:14px;cursor:pointer}
+
+/* Sekmeler: geniş ekranda üstte, telefonda altta */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;text-align:center;padding:10px 2px 12px;text-decoration:none;color:var(--muted);font-size:13px;font-weight:600;position:relative}
+.tabs a .n{display:block;font-family:var(--display);font-size:16px;color:var(--ink)}
+.tabs a[aria-current="page"]{color:var(--oxblood)}
+.tabs a[aria-current="page"]::before{content:"";position:absolute;left:20%;right:20%;top:0;height:3px;background:var(--oxblood);border-radius:0 0 3px 3px}
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--oxblood);color:#fff;font-size:12px;line-height:20px;margin-left:4px;vertical-align:1px}
+@media (min-width:760px){
+  body{padding-bottom:40px}
+  .tabs{position:sticky;top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--line);justify-content:center;gap:4px;padding:0}
+  .tabs a{flex:0 0 auto;padding:14px 18px;font-size:16px}
+  .tabs a .n{display:inline;font-size:16px;margin-right:2px}
+  .tabs a[aria-current="page"]::before{top:auto;bottom:0;left:12px;right:12px;border-radius:3px 3px 0 0}
+}
+
+main.wrap{padding-top:24px;padding-bottom:32px}
+.page-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 6px}
+.page-h h1{font-size:30px;letter-spacing:-.02em}
+.lede{color:var(--muted);margin:0 0 20px;max-width:62ch}
+.section-h{font-size:19px;margin:28px 0 10px;display:flex;align-items:center;gap:8px}
+.section-h small{font-family:var(--body);font-weight:400;color:var(--muted);font-size:15px}
+
+/* Öneri kartları: tek yönlü kapı çift dikişli */
+.cards{display:grid;gap:10px}
+.card{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px 14px 18px;cursor:pointer;position:relative;text-decoration:none;color:inherit}
+.card:hover{border-color:var(--muted)}
+.card.tek{outline:1.5px dashed var(--thread);outline-offset:-6px}
+.card h3{font-size:17px;font-weight:700;margin:2px 0 6px;font-family:var(--body)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;font-size:14px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 9px;font-size:13px;font-weight:600;background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.pill.gate-tek{background:var(--oxblood-soft);border-color:transparent;color:var(--oxblood)}
+.pill.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.pill.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.pill.late{background:var(--bad);border-color:transparent;color:#fff}
+.idtag{font-size:13px;color:var(--muted)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted)}
+
+/* CEO notu */
+.ceo{background:var(--surface);border-left:4px solid var(--oxblood);border-radius:4px 10px 10px 4px;padding:14px 18px;margin-bottom:8px}
+.ceo .k{font-size:14px;color:var(--muted);margin-bottom:4px}
+.ceo .md{max-height:9.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.ceo .md h1{font-size:19px}
+
+/* Okuma görünümü */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 20px 24px}
+.back{display:inline-block;margin:0 0 14px;font-weight:600;text-decoration:none}
+.md{max-width:68ch}
+.md h1{font-size:24px;margin:.2em 0 .5em}
+.md h2{font-size:19px;margin:1.3em 0 .4em}
+.md h3{font-size:17px;margin:1.1em 0 .3em}
+.md p,.md ul,.md ol{margin:.5em 0}
+.md table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%;font-size:15px;margin:.8em 0}
+.md th,.md td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+.md th{background:var(--paper)}
+.md code{font-size:.9em;background:var(--paper);padding:1px 4px;border-radius:4px}
+.md pre{background:var(--paper);padding:12px;border-radius:8px;overflow-x:auto;font-size:14px}
+.md pre code{background:none;padding:0}
+.md pre.ekle{background:var(--ok-soft);border-left:4px solid var(--ok)}
+.md pre.ekle::before{content:"Onaylanırsa hafızaya eklenecek metin";display:block;font:600 13px var(--body);color:var(--ok);margin-bottom:6px}
+.md blockquote{margin:.6em 0;padding:2px 14px;border-left:3px solid var(--line);color:var(--muted)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15px;margin:12px 0 4px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0}
+
+/* Karar alanı */
+.decide{position:sticky;bottom:calc(64px + env(safe-area-inset-bottom));margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 -6px 20px -12px rgba(0,0,0,.35)}
+@media (min-width:760px){.decide{bottom:12px}}
+.decide .row{display:flex;gap:8px;flex-wrap:wrap}
+.decide textarea{width:100%;min-height:46px;margin:0 0 8px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--paper)}
+.decide .hint{font-size:14px;color:var(--muted);margin:0 0 8px}
+.btn{border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--paper);border:1px solid var(--line)}
+.btn.primary{background:var(--ok);color:#fff;border-color:transparent}
+.btn.dark{background:var(--oxblood);color:#fff;border-color:transparent}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary,:root:not([data-theme="light"]) .btn.dark{color:#111}}
+:root[data-theme="dark"] .btn.primary,:root[data-theme="dark"] .btn.dark{color:#111}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.55;cursor:wait}
+.grow{flex:1}
+
+/* Listeler */
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.list a{display:flex;justify-content:space-between;gap:10px;padding:11px 14px;border-top:1px solid var(--line);text-decoration:none;color:inherit}
+.list a:first-child{border-top:0}
+.list a:hover{background:var(--paper)}
+.list .s{color:var(--muted);font-size:14px;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px;cursor:pointer}
+a.chip{text-decoration:none;color:var(--ink)}
+.chip[aria-pressed="true"],a.chip[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.team{margin-bottom:18px}
+.team h2{font-size:17px;margin:0 0 8px}
+.agent-tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+
+/* Formlar */
+label.f{display:block;font-weight:600;margin:14px 0 4px}
+.f-help{font-size:14px;color:var(--muted);margin:2px 0 6px}
+input.t,textarea.t{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--surface)}
+textarea.t{min-height:280px;font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+.login{max-width:520px;margin:6vh auto 0}
+.login h1{font-size:34px;letter-spacing:-.02em;margin-bottom:6px}
+.err{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 12px;margin:12px 0;font-weight:600}
+.okmsg{background:var(--ok-soft);color:var(--ok);border-radius:8px;padding:10px 12px;margin:12px 0;font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-weight:600;z-index:30;max-width:92vw}
+@media (min-width:760px){.toast{bottom:24px}}
+.loading{color:var(--muted);padding:30px 0}
+@media (prefers-reduced-motion:no-preference){.toast{animation:pop .18s ease-out}@keyframes pop{from{opacity:0;transform:translate(-50%,6px)}}}
+</style>
+</head>
+<body>
+<div id="app"><div class="wrap"><p class="loading">Yükleniyor…</p></div></div>
+
+<script>
+"use strict";
+/* ---------- Ayar ---------- */
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+const S = { repo:null, token:null, branch:null, me:null, tree:[], cards:[], kurul:{uyeler:[]}, cache:{}, raporFiltre:"Tümü" };
+const API = "https://api.github.com";
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = ()=> new Date().toISOString().slice(0,10);
+
+/* ---------- GitHub ---------- */
+async function gh(path, opts={}){
+  const r = await fetch(API+path, {...opts, headers:{
+    "Accept":"application/vnd.github+json","Authorization":"Bearer "+S.token,
+    "X-GitHub-Api-Version":"2022-11-28", ...(opts.body?{"Content-Type":"application/json"}:{})
+  }});
+  if(!r.ok){
+    let m=""; try{ m=(await r.json()).message||"" }catch(e){}
+    const err = new Error(m||("HTTP "+r.status)); err.status=r.status; throw err;
+  }
+  return r.status===204 ? null : r.json();
+}
+const encPath = p => p.split("/").map(encodeURIComponent).join("/");
+const b64dec = b => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+function b64enc(s){ const by=new TextEncoder().encode(s); let bin=""; for(let i=0;i<by.length;i+=0x8000) bin+=String.fromCharCode.apply(null,by.subarray(i,i+0x8000)); return btoa(bin) }
+async function getFile(path, fresh=false){
+  if(!fresh && S.cache[path]) return S.cache[path];
+  const j = await gh(`/repos/${S.repo}/contents/${encPath(path)}?ref=${encodeURIComponent(S.branch)}`+(fresh?`&t=${Date.now()}`:""));
+  const f = { path, sha:j.sha, text: j.content!=null ? b64dec(j.content) : null, size:j.size };
+  S.cache[path]=f; return f;
+}
+async function putFile(path, text, sha, message){
+  const body = { message, content:b64enc(text), branch:S.branch }; if(sha) body.sha=sha;
+  const j = await gh(`/repos/${S.repo}/contents/${encPath(path)}`, {method:"PUT", body:JSON.stringify(body)});
+  S.cache[path] = { path, sha:j.content.sha, text };
+  if(!S.tree.some(t=>t.path===path)) S.tree.push({path,type:"blob"});
+  return j;
+}
+
+/* ---------- Öneri kartı biçimi ---------- */
+const FIELD_ORDER=["id","baslik","ekip","oneren_ajan","tur","kapi","oncelik","okr","maliyet_tl","ekler","denetci","uyum","durum","olusturma","son_tarih","onaylayanlar","kurul_notu","hedef_dosya"];
+function parseCard(text){
+  const m = text.replace(/^﻿/,"").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if(!m) return null;
+  const f={}, order=[];
+  for(const line of m[1].split(/\r?\n/)){
+    const mm=line.match(/^([A-Za-z_][\w]*)\s*:\s?(.*)$/); if(!mm) continue;
+    let v=mm[2].trim();
+    if(/^\[.*\]$/.test(v)) v=v.slice(1,-1).split(",").map(x=>x.trim().replace(/^["']|["']$/g,"")).filter(Boolean);
+    else v=v.replace(/^["'](.*)["']$/,"$1");
+    f[mm[1]]=v; order.push(mm[1]);
+  }
+  return { f, order, body:m[2] };
+}
+function serializeCard(c){
+  const keys=[...FIELD_ORDER.filter(k=>k in c.f), ...c.order.filter(k=>!FIELD_ORDER.includes(k))];
+  const uniq=[...new Set(keys)];
+  const line=k=>{ const v=c.f[k]; return (Array.isArray(v) ? `${k}: [${v.join(", ")}]` : `${k}: ${String(v??"").replace(/\r?\n/g," ")}`).trimEnd() };
+  return "---\n"+uniq.map(line).join("\n")+"\n---\n"+c.body.replace(/^\n*/,"");
+}
+const arr = v => Array.isArray(v) ? v : (v ? [v] : []);
+const isTek = c => /^tek/i.test(c.f.kapi||"");
+const need = c => isTek(c) ? 2 : 1;
+const ekleBlock = body => { const m=body.match(/```ekle\s*\n([\s\S]*?)\n```/); return m?m[1]:null };
+const uyeAd = login => { const u=(S.kurul.uyeler||[]).find(x=>x.github && x.github.toLowerCase()===String(login).toLowerCase()); return u?u.ad:login };
+function late(c){ return c.f.durum==="Onay bekliyor" && c.f.son_tarih && c.f.son_tarih < today() }
+
+/* ---------- Markdown ---------- */
+function md(text){
+  let html;
+  if(window.marked){ html = marked.parse(text||"", {gfm:true, breaks:false}) }
+  else { html = "<pre>"+esc(text)+"</pre>" }
+  html = window.DOMPurify ? DOMPurify.sanitize(html) : html;
+  const d=document.createElement("div"); d.innerHTML=html;
+  d.querySelectorAll("pre > code.language-ekle").forEach(c=>c.parentElement.classList.add("ekle"));
+  return d.innerHTML;
+}
+const stripFront = t => (t||"").replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,"");
+
+/* ---------- Yükleme ---------- */
+async function loadAll(){
+  const repo = await gh(`/repos/${S.repo}`);
+  S.branch = repo.default_branch;
+  S.canPush = !!(repo.permissions && repo.permissions.push);
+  S.me = await gh(`/user`);
+  const t = await gh(`/repos/${S.repo}/git/trees/${encodeURIComponent(S.branch)}?recursive=1`);
+  S.tree = t.tree.filter(x=>x.type==="blob");
+  try{ S.kurul = JSON.parse((await getFile("sistem/kurul.json")).text) }catch(e){ S.kurul={uyeler:[]} }
+  await loadCards();
+}
+async function loadCards(){
+  const paths = S.tree.map(x=>x.path).filter(p=>/^onaylar\/[^/]+\.md$/.test(p));
+  const files = await Promise.all(paths.map(p=>getFile(p).catch(()=>null)));
+  S.cards = files.filter(Boolean).map(f=>{ const c=parseCard(f.text||""); return c ? {...c, path:f.path} : null }).filter(Boolean)
+    .sort((a,b)=> (b.f.id||"").localeCompare(a.f.id||""));
+}
+
+/* ---------- Görünümler ---------- */
+const TABS=[["pano","Pano"],["raporlar","Raporlar"],["ajanlar","Ajanlar"],["beyin","Beyin"],["yeni","Yeni öneri"]];
+function shell(active, inner){
+  const pending = S.cards.filter(c=>c.f.durum==="Onay bekliyor" && !arr(c.f.onaylayanlar).includes(S.me.login)).length;
+  return `<header class="top"><div class="wrap">
+      <a class="brand" href="#pano">Beyin Paneli</a>
+      <span class="who">${esc(uyeAd(S.me.login))}</span>
+      <button type="button" id="logout">Çıkış</button></div></header>
+    <nav class="tabs" aria-label="Bölümler">${TABS.map(([k,l])=>`<a href="#${k}" ${k===active?'aria-current="page"':""}><span class="n">${l}</span>${k==="pano"&&pending?`<span class="badge" aria-label="${pending} kart sizi bekliyor">${pending}</span>`:""}</a>`).join("")}</nav>
+    <main class="wrap">${inner}</main>`;
+}
+
+function cardHTML(c){
+  const ons = arr(c.f.onaylayanlar);
+  const gate = isTek(c) ? `<span class="pill gate-tek">Tek yönlü · ${ons.length}/2 onay</span>` : `<span class="pill">Çift yönlü</span>`;
+  const st = c.f.durum==="Onay bekliyor" ? (late(c)?`<span class="pill late">Süresi geçti (${esc(c.f.son_tarih)})</span>`:(c.f.son_tarih?`<span class="pill">Son: ${esc(c.f.son_tarih)}</span>`:""))
+    : `<span class="pill ${/Onaylandı|Uygulandı/.test(c.f.durum)?"ok":"warn"}">${esc(c.f.durum)}</span>`;
+  const mine = ons.includes(S.me.login) && c.f.durum==="Onay bekliyor" ? `<span class="pill ok">Siz onayladınız, diğer üye bekleniyor</span>` : "";
+  return `<a class="card ${isTek(c)?"tek":""}" href="#kart/${encodeURIComponent(c.f.id||c.path)}">
+    <span class="idtag">${esc(c.f.id)} · ${esc(c.f.ekip)} · ${esc(c.f.oneren_ajan)}</span>
+    <h3>${esc(c.f.baslik||"(başlıksız)")}</h3>
+    <span class="meta">${gate}<span class="pill">${esc(c.f.tur||"Diğer")}</span>${st}${mine}${Number(c.f.maliyet_tl)>0?`<span class="pill">${Number(c.f.maliyet_tl).toLocaleString("tr-TR")} TL</span>`:""}</span></a>`;
+}
+function cardList(list, emptyText){ return list.length ? `<div class="cards">${list.map(cardHTML).join("")}</div>` : `<div class="empty">${emptyText}</div>` }
+
+function latestCeo(){
+  const p = S.tree.map(x=>x.path).filter(p=>/\/ciktilar\/.+\/CEO-[^/]+\.md$/.test(p)).sort((a,b)=>rapSort(a,b));
+  return p[0]||null;
+}
+async function viewPano(){
+  const bek = S.cards.filter(c=>c.f.durum==="Onay bekliyor");
+  const prio = {Yüksek:0,Orta:1,Düşük:2};
+  const srt = (a,b)=> (late(b)-late(a)) || ((prio[a.f.oncelik]??3)-(prio[b.f.oncelik]??3)) || (a.f.son_tarih||"").localeCompare(b.f.son_tarih||"");
+  const tek = bek.filter(isTek).sort(srt), cift = bek.filter(c=>!isTek(c)).sort(srt);
+  const uyg = S.cards.filter(c=>c.f.durum==="Onaylandı");
+  const red = S.cards.filter(c=>/Reddedildi|Geri gönderildi/.test(c.f.durum)).slice(0,10);
+  const ark = S.cards.filter(c=>/Uygulandı|Süresi doldu/.test(c.f.durum)).slice(0,10);
+  let ceo="";
+  const cp = latestCeo();
+  if(cp){ try{ const f=await getFile(cp); ceo=`<a class="ceo card" href="#rapor/${encodeURIComponent(cp)}"><div class="k">CEO'nun son notu · ${esc(cp.split("/").pop().replace(".md",""))}</div><div class="md">${md(f.text)}</div></a>` }catch(e){} }
+  render("pano", `<div class="page-h"><h1>Onay panosu</h1><button class="btn" id="refresh" type="button">Yenile</button></div>
+    <p class="lede">Ajanların önerileri burada sizi bekler. Onaylamadığınız hiçbir şey uygulanmaz, hiçbir hafızaya eklenmez.</p>
+    ${ceo}
+    <h2 class="section-h">Tek yönlü kapılar <small>ikinizin de onayı gerekir</small></h2>${cardList(tek,"Bekleyen tek yönlü kart yok.")}
+    <h2 class="section-h">Çift yönlü kapılar <small>birinizin onayı yeterli</small></h2>${cardList(cift,"Bekleyen çift yönlü kart yok.")}
+    <h2 class="section-h">Onaylandı, uygulanacak</h2>${cardList(uyg,"Uygulanmayı bekleyen kart yok.")}
+    <h2 class="section-h">Reddedilen ve geri gönderilen <small>son 10</small></h2>${cardList(red,"Henüz yok.")}
+    <h2 class="section-h">Arşiv <small>son 10</small></h2>${cardList(ark,"Henüz yok.")}`);
+  $("#refresh").onclick = async e=>{ e.target.disabled=true; S.cache={}; try{ await loadAll(); route() }catch(err){ toast(err.message) } };
+}
+
+async function viewKart(id){
+  let c = S.cards.find(x=>x.f.id===id || x.path===id);
+  if(!c){ render("pano",`<a class="back" href="#pano">‹ Panoya dön</a><div class="empty">Kart bulunamadı: ${esc(id)}</div>`); return }
+  const ons = arr(c.f.onaylayanlar);
+  const facts = [["Ekip",c.f.ekip],["Öneren ajan",c.f.oneren_ajan],["Tür",c.f.tur],["Kapı",c.f.kapi],["Öncelik",c.f.oncelik],["OKR",c.f.okr],
+    ["Maliyet",Number(c.f.maliyet_tl)>0?Number(c.f.maliyet_tl).toLocaleString("tr-TR")+" TL":"Yok"],["Denetçi",c.f.denetci],["Uyum",c.f.uyum],
+    ["Durum",c.f.durum],["Onaylayanlar",ons.length?ons.map(uyeAd).join(", "):"Henüz yok"],["Son tarih",c.f.son_tarih],
+    ...(c.f.hedef_dosya?[["Eklenecek dosya",c.f.hedef_dosya]]:[]), ...(c.f.kurul_notu?[["Kurul notu",c.f.kurul_notu]]:[])].filter(x=>x[1]);
+  const ekler = arr(c.f.ekler).map(p=>`<li><a href="#dosya/${encodeURIComponent(p)}">${esc(p)}</a></li>`).join("");
+  let decide="";
+  if(c.f.durum==="Onay bekliyor"){
+    const already = ons.includes(S.me.login);
+    const kalan = need(c)-ons.length;
+    decide = `<div class="decide">
+      ${already?`<p class="hint">Bu kartı onayladınız. Tek yönlü kapı olduğu için diğer kurul üyesinin de onayı bekleniyor.</p>`:
+        `<p class="hint">${isTek(c)?(kalan===2?"Tek yönlü kapı: ikinizin de onayı gerekir.":"Diğer üye onayladı; sizin onayınızla karar kesinleşir."):"Çift yönlü kapı: sizin onayınız yeterli."}${c.f.tur==="Hafıza"&&c.f.hedef_dosya?" Son onayla metin hafızaya eklenir.":""}</p>`}
+      <label for="note" class="f-help">Not (reddeder veya geri gönderirseniz zorunlu)</label>
+      <textarea id="note" placeholder="Örn. Bütçeyi yarıya indirip tekrar getir."></textarea>
+      <div class="row">${already?"":`<button class="btn primary grow" id="b-ok" type="button">Onayla</button>`}
+      <button class="btn" id="b-back" type="button">Not ile geri gönder</button>
+      <button class="btn danger" id="b-no" type="button">Reddet</button></div></div>`;
+  } else if(c.f.durum==="Onaylandı"){
+    decide = `<div class="decide"><p class="hint">Onaylandı. Uyguladıktan sonra işaretleyin; Öğrenme ajanı sonucu ölçmeye başlar.</p><div class="row"><button class="btn dark grow" id="b-done" type="button">Uygulandı olarak işaretle</button></div></div>`;
+  }
+  render("pano", `<a class="back" href="#pano">‹ Panoya dön</a>
+    <article class="reader"><span class="idtag">${esc(c.f.id)}</span><h1 style="font-size:24px;margin:4px 0 0">${esc(c.f.baslik)}</h1>
+    <dl class="facts">${facts.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${ekler?`<p style="margin:10px 0 0;font-weight:600">Ekler</p><ul style="margin:4px 0 0">${ekler}</ul>`:""}
+    <div class="md">${md(c.body)}</div></article>${decide}`);
+  const note = ()=> ($("#note")?.value||"").trim();
+  const act = (fn)=> async e=>{ document.querySelectorAll(".decide .btn").forEach(b=>b.disabled=true); try{ await fn() }catch(err){ toast(err.status===409?"Kart bu arada değişti; yeniden yüklendi, tekrar deneyin.":"Kaydedilemedi: "+err.message); S.cache={}; await loadAll().catch(()=>{}); route() } };
+  $("#b-ok") && ($("#b-ok").onclick = act(()=>decideCard(c.path,"onay",note())));
+  $("#b-no") && ($("#b-no").onclick = ()=>{ if(!note()){ $("#note").focus(); toast("Reddetme nedenini nota yazın."); return } act(()=>decideCard(c.path,"ret",note()))() });
+  $("#b-back") && ($("#b-back").onclick = ()=>{ if(!note()){ $("#note").focus(); toast("Ne düzeltilmeli? Nota yazın."); return } act(()=>decideCard(c.path,"geri",note()))() });
+  $("#b-done") && ($("#b-done").onclick = act(()=>decideCard(c.path,"uygulandi","")));
+}
+
+async function decideCard(path, kind, note){
+  const f = await getFile(path, true);           // her zaman en güncel hâli
+  const c = parseCard(f.text); c.path=path;
+  const me = S.me.login, ad = uyeAd(me), id = c.f.id;
+  const ons = arr(c.f.onaylayanlar);
+  if(kind!=="uygulandi" && c.f.durum!=="Onay bekliyor"){ toast(`Bu kart artık "${c.f.durum}" durumunda.`); await loadCards(); route(); return }
+  let msg, done="";
+  if(kind==="onay"){
+    if(ons.includes(me)){ toast("Bu kartı zaten onayladınız."); return }
+    ons.push(me); c.f.onaylayanlar=ons;
+    if(note) c.f.kurul_notu = (c.f.kurul_notu?c.f.kurul_notu+" | ":"")+`${ad}: ${note}`;
+    if(ons.length >= need(c)){
+      c.f.durum="Onaylandı";
+      const ek = ekleBlock(c.body);
+      if(c.f.tur==="Hafıza" && c.f.hedef_dosya && ek){
+        const t = await getFile(c.f.hedef_dosya, true);
+        const add = `\n\n<!-- ${id} · ${today()} · kurul onayıyla eklendi: ${ons.map(uyeAd).join(", ")} -->\n${ek}\n`;
+        await putFile(c.f.hedef_dosya, t.text.replace(/\s*$/,"")+add, t.sha, `hafiza: ${id} kurul onayıyla eklendi (${ons.map(uyeAd).join(", ")})`);
+        c.f.durum="Uygulandı"; done=" Metin hafızaya eklendi.";
+      }
+      msg=`onay(${id}): ${ad} onayladı → ${c.f.durum}`;
+    } else msg=`onay(${id}): ${ad} onayladı (${ons.length}/${need(c)})`;
+  } else if(kind==="ret"){ c.f.durum="Reddedildi"; c.f.kurul_notu=`${ad}: ${note}`; msg=`onay(${id}): ${ad} reddetti` }
+  else if(kind==="geri"){ c.f.durum="Geri gönderildi"; c.f.kurul_notu=`${ad}: ${note}`; msg=`onay(${id}): ${ad} not ile geri gönderdi` }
+  else { if(c.f.durum!=="Onaylandı"){ toast(`Kart "${c.f.durum}" durumunda.`); return } c.f.durum="Uygulandı"; msg=`onay(${id}): ${ad} uygulandı olarak işaretledi` }
+  await putFile(path, serializeCard(c), f.sha, msg);
+  await loadCards();
+  toast(({onay: c.f.durum==="Onay bekliyor"?"Onayınız kaydedildi; diğer üye bekleniyor.":"Onaylandı."+done, ret:"Reddedildi.", geri:"Not ile geri gönderildi.", uygulandi:"Uygulandı olarak işaretlendi."})[kind]);
+  route();
+}
+
+/* Raporlar */
+function rapSort(a,b){ const ka=(a.match(/ciktilar\/([^/]+)\//)||[])[1]||"", kb=(b.match(/ciktilar\/([^/]+)\//)||[])[1]||""; return kb.localeCompare(ka) || b.split("/").pop().localeCompare(a.split("/").pop()) }
+const RF = {"Tümü":()=>true,"CEO notları":n=>/^(CEO|DIR)-/.test(n),"Ekip raporları":n=>/^EKP-/.test(n),"Kurmay":n=>/^(KRB|DNT|OGR)-/.test(n),"Diğer":n=>!/^(CEO|DIR|EKP|KRB|DNT|OGR)-/.test(n)};
+function ajanOf(p){ const m=p.match(/^organizasyon\/(.+)\/ciktilar\//); return m?m[1].split("/").pop():"" }
+function viewRaporlar(){
+  const all = S.tree.map(x=>x.path).filter(p=>/\/ciktilar\/.+\.md$/.test(p)).sort(rapSort);
+  const list = all.filter(p=>RF[S.raporFiltre](p.split("/").pop()));
+  render("raporlar", `<div class="page-h"><h1>Raporlar</h1></div>
+    <p class="lede">Ajanların ürettiği her not ve rapor, en yeniden eskiye.</p>
+    <div class="chips" role="group" aria-label="Rapor türü">${Object.keys(RF).map(k=>`<button type="button" class="chip" aria-pressed="${k===S.raporFiltre}" data-k="${esc(k)}">${esc(k)}</button>`).join("")}</div>
+    ${list.length?`<div class="list">${list.map(p=>`<a href="#rapor/${encodeURIComponent(p)}"><span>${esc(p.split("/").pop().replace(/\.md$/,""))}</span><span class="s">${esc(ajanOf(p))} · ${esc((p.match(/ciktilar\/([^/]+)\//)||[])[1]||"")}</span></a>`).join("")}</div>`:`<div class="empty">Bu türde rapor yok. Ajanlar raporlarını kendi klasörlerinin ciktilar/YYYY-AA/ altına yazdıkça burada görünür.</div>`}`);
+  document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ S.raporFiltre=b.dataset.k; viewRaporlar() });
+}
+
+/* Dosya okuyucu + düzenleme */
+async function viewDosya(path, tab, backHref, backLabel){
+  render(tab, `<p class="loading">Yükleniyor…</p>`);
+  let f; try{ f = await getFile(path) }catch(e){ render(tab, `<a class="back" href="${backHref}">‹ ${backLabel}</a><div class="err">Dosya açılamadı: ${esc(e.message)}</div>`); return }
+  const isMd = /\.md$/i.test(path), isText = /\.(md|json|csv|txt)$/i.test(path);
+  const ghUrl = `https://github.com/${S.repo}/blob/${S.branch}/${encPath(path)}`;
+  const body = !isText || f.text==null ? `<p>Bu dosya panelde gösterilemiyor. <a href="${ghUrl}" target="_blank" rel="noopener">GitHub'da açın</a>.</p>`
+    : isMd ? `<div class="md">${md(stripFront(f.text))}</div>` : `<div class="md"><pre>${esc(f.text)}</pre></div>`;
+  render(tab, `<a class="back" href="${backHref}">‹ ${backLabel}</a>
+    <article class="reader"><div class="page-h" style="margin-bottom:10px"><span class="idtag">${esc(path)}</span>${isText&&S.canPush?`<button class="btn" id="edit" type="button">Düzenle</button>`:""}</div>${body}
+    <p style="margin:18px 0 0;font-size:14px"><a href="https://github.com/${S.repo}/commits/${S.branch}/${encPath(path)}" target="_blank" rel="noopener">Değişiklik geçmişi</a></p></article>`);
+  $("#edit") && ($("#edit").onclick=()=>editFile(path, tab, backHref, backLabel));
+}
+async function editFile(path, tab, backHref, backLabel){
+  const f = await getFile(path, true);
+  const warn = /hafiza\.md$/.test(path) ? `<div class="err">Hafıza dosyaları normalde yalnızca onaylanmış Hafıza kartlarıyla değişir. Elle düzenleme de geçmişe sizin adınızla yazılır.</div>` : "";
+  render(tab, `<a class="back" href="#dosya/${encodeURIComponent(path)}">‹ Vazgeç</a><h1 style="font-size:22px">Düzenle</h1><p class="idtag">${esc(path)}</p>${warn}
+    <textarea class="t" id="ed" aria-label="Dosya içeriği" style="min-height:60vh">${esc(f.text)}</textarea>
+    <label class="f" for="msg">Ne değişti? (kısa not)</label><input class="t" id="msg" placeholder="Örn. Marka adı eklendi">
+    <p><button class="btn dark" id="save" type="button">Değişiklikleri kaydet</button></p>`);
+  $("#save").onclick = async e=>{
+    e.target.disabled=true;
+    try{ await putFile(path, $("#ed").value, f.sha, `${path.split("/").slice(-2).join("/")}: ${($("#msg").value||"düzenlendi").trim()} (${uyeAd(S.me.login)})`); toast("Kaydedildi."); location.hash="#dosya/"+encodeURIComponent(path) }
+    catch(err){ e.target.disabled=false; toast(err.status===409?"Dosya bu arada değişti. Vazgeçip tekrar açın.":"Kaydedilemedi: "+err.message) }
+  };
+}
+
+/* Ajanlar */
+const TEAM_ADI={ceo:"Yönetim",kurmay:"Kurmay",buyume:"Büyüme","marka-deneyim":"Marka ve Deneyim",musteri:"Müşteri",urun:"Ürün",operasyon:"Operasyon",finans:"Finans"};
+const AJAN_ADI={"kurmay-baskani":"Kurmay başkanı",denetci:"Denetçi",ogrenme:"Öğrenme","hukuk-uyum":"Hukuk ve uyum","meta-reklam":"Meta reklam","google-arama":"Google arama",kreatif:"Kreatif","icerik-seo-geo":"İçerik, SEO ve GEO","site-cro":"Site ve CRO","sosyal-medya":"Sosyal medya","crm-eposta":"CRM ve e-posta",whatsapp:"WhatsApp","musteri-hizmetleri":"Müşteri hizmetleri","pazar-arastirma":"Pazar araştırma",koleksiyon:"Koleksiyon","uretim-plani":"Üretim planı",kalite:"Kalite","kargo-iade":"Kargo ve iade",raporlama:"Raporlama","nakit-butce":"Nakit ve bütçe"};
+const pretty = s => AJAN_ADI[s] || TEAM_ADI[s] || s.split("-").map(w=>w.charAt(0).toLocaleUpperCase("tr-TR")+w.slice(1)).join(" ");
+function viewAjanlar(){
+  const skills = S.tree.map(x=>x.path).filter(p=>/^organizasyon\/.+\/SKILL\.md$/.test(p));
+  const teams = {};
+  for(const p of skills){ const parts=p.split("/").slice(1,-1); const t=parts[0]; (teams[t]=teams[t]||[]).push({dir:parts.join("/"), name:parts.length===1?(t==="ceo"?"CEO":pretty(t)+" sorumlusu"):pretty(parts[parts.length-1]), lead:parts.length===1}) }
+  const order=Object.keys(TEAM_ADI);
+  const keys=Object.keys(teams).sort((a,b)=>(order.indexOf(a)+99*(order.indexOf(a)<0))-(order.indexOf(b)+99*(order.indexOf(b)<0)));
+  const extra = S.tree.some(x=>x.path==="organizasyon/hazirda-bekleyenler.md") ? `<p><a href="#dosya/${encodeURIComponent("organizasyon/hazirda-bekleyenler.md")}">Hazırda bekleyen ajanlar</a> · <a href="#dosya/${encodeURIComponent("organizasyon/yonetim-kurulu.md")}">Yönetim kurulu tüzüğü</a></p>` : "";
+  render("ajanlar", `<div class="page-h"><h1>Ajanlar</h1></div><p class="lede">${skills.length} aktif ajan. Her ajanın görev tanımı, hafızası ve çıktıları.</p>
+    ${keys.map(t=>`<section class="team"><h2>${esc(TEAM_ADI[t]||pretty(t))}</h2><div class="list">${teams[t].sort((a,b)=>b.lead-a.lead).map(a=>`<a href="#ajan/${encodeURIComponent(a.dir)}"><span>${esc(a.name)}</span><span class="s">${a.lead?"sorumlu":""}</span></a>`).join("")}</div></section>`).join("")}${extra}`);
+}
+async function viewAjan(dir, sub){
+  sub = sub||"gorev";
+  const base="organizasyon/"+dir;
+  const outs = S.tree.map(x=>x.path).filter(p=>p.startsWith(base+"/ciktilar/") && /\.md$/.test(p)).sort(rapSort);
+  const name = dir.split("/").length===1 ? (dir==="ceo"?"CEO":pretty(dir)+" sorumlusu") : pretty(dir.split("/").pop());
+  const tabs = [["gorev","Görev tanımı"],["hafiza","Hafıza"],["ciktilar",`Çıktılar (${outs.length})`]];
+  let inner="";
+  if(sub==="ciktilar") inner = outs.length?`<div class="list">${outs.map(p=>`<a href="#rapor/${encodeURIComponent(p)}"><span>${esc(p.split("/").pop().replace(/\.md$/,""))}</span><span class="s">${esc((p.match(/ciktilar\/([^/]+)\//)||[])[1]||"")}</span></a>`).join("")}</div>`:`<div class="empty">Henüz çıktı yok.</div>`;
+  else { const p = base+"/"+(sub==="hafiza"?"hafiza.md":"SKILL.md"); try{ const f=await getFile(p); inner=`<article class="reader"><div class="md">${md(stripFront(f.text))}</div><p style="margin:18px 0 0;font-size:14px"><a href="#dosya/${encodeURIComponent(p)}">Dosyayı aç / düzenle</a></p></article>` }catch(e){ inner=`<div class="empty">Dosya yok: ${esc(p)}</div>` } }
+  render("ajanlar", `<a class="back" href="#ajanlar">‹ Ajanlar</a><div class="page-h"><h1>${esc(name)}</h1></div>
+    <div class="agent-tabs" role="group" aria-label="Ajan bölümü">${tabs.map(([k,l])=>`<a class="chip" ${k===sub?'aria-current="page"':""} href="#ajan/${encodeURIComponent(dir)}/${k}">${l}</a>`).join("")}</div>${inner}`);
+}
+
+/* Beyin (şirket ve sistem dosyaları) */
+function viewBeyin(){
+  const groups=[["Şirket","sirket/"],["Sistem","sistem/"],["Veri","veri/"],["Organizasyon","organizasyon/"]];
+  const top = S.tree.map(x=>x.path).filter(p=>!p.includes("/") && /\.md$/.test(p));
+  const files = pre => S.tree.map(x=>x.path).filter(p=>p.startsWith(pre) && (pre!=="organizasyon/" || p.split("/").length===2) && !/\.gitkeep$/.test(p));
+  render("beyin", `<div class="page-h"><h1>Beyin</h1></div><p class="lede">Şirketin tek doğru kaynağı. Her yapay zekâ işe buradan başlar.</p>
+    <section class="team"><h2>Başlangıç</h2><div class="list">${top.map(p=>`<a href="#dosya/${encodeURIComponent(p)}"><span>${esc(p)}</span></a>`).join("")}</div></section>
+    ${groups.map(([n,pre])=>{ const fs=files(pre); return fs.length?`<section class="team"><h2>${n}</h2><div class="list">${fs.map(p=>`<a href="#dosya/${encodeURIComponent(p)}"><span>${esc(p.slice(pre.length))}</span></a>`).join("")}</div></section>`:"" }).join("")}
+    <p style="font-size:15px"><a href="https://github.com/${S.repo}" target="_blank" rel="noopener">Depoyu GitHub'da aç</a> · <a href="https://github.com/${S.repo}/commits/${S.branch}" target="_blank" rel="noopener">Tüm değişiklik geçmişi</a></p>`);
+}
+
+/* Yeni öneri */
+function nextId(){
+  const d=new Date(), yyaa=String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,"0");
+  const nums = S.cards.map(c=>c.f.id||"").concat(S.tree.map(x=>x.path.split("/").pop().replace(/\.md$/,"")))
+    .map(i=>i.match(new RegExp(`^ONR-${yyaa}-(\\d{3})$`))).filter(Boolean).map(m=>+m[1]);
+  return `ONR-${yyaa}-${String((nums.length?Math.max(...nums):0)+1).padStart(3,"0")}`;
+}
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10) }
+function nextMonday(){ const d=new Date(); d.setDate(d.getDate()+((8-d.getDay())%7||7)); return d.toISOString().slice(0,10) }
+const TEMPLATE = `---
+baslik:
+ekip: Büyüme
+oneren_ajan:
+tur: Yayın
+kapi: Çift yönlü
+oncelik: Orta
+okr: O2
+maliyet_tl: 0
+ekler: []
+denetci: Geçti
+uyum: Gerekmiyor
+hedef_dosya:
+---
+## Ne öneriyoruz
+
+## Neden
+
+## Beklenen etki
+
+## Onaylanırsa kim, ne zaman uygular
+
+## Onaylanmazsa ne olur / alternatif
+`;
+function viewYeni(){
+  render("yeni", `<div class="page-h"><h1>Yeni öneri</h1></div>
+    <p class="lede">ChatGPT veya sohbetteki Claude bir öneri kartı ürettiyse buraya yapıştırın. Numara, durum ve son tarih otomatik atanır.</p>
+    <label class="f" for="paste">Öneri kartı (Markdown)</label>
+    <p class="f-help">Kart <code>---</code> satırları arasındaki alanlarla başlamalı. Biçim: Beyin → sistem/onay-sureci.md</p>
+    <textarea class="t" id="paste" placeholder="---&#10;baslik: …&#10;kapi: Çift yönlü&#10;---&#10;## Ne öneriyoruz …"></textarea>
+    <p class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="tpl" type="button">Boş şablonu doldur</button><button class="btn dark" id="add" type="button">Panoya ekle</button></p>
+    <div id="out"></div>`);
+  $("#tpl").onclick=()=>{ $("#paste").value=TEMPLATE; $("#paste").focus() };
+  $("#add").onclick=async e=>{
+    const out=$("#out"); out.innerHTML="";
+    let raw=$("#paste").value.trim().replace(/^```(?:markdown|md)?\s*\n/,"").replace(/\n```\s*$/,"");
+    const c=parseCard(raw);
+    if(!c){ out.innerHTML=`<div class="err">Kart --- satırları arasındaki alanlarla başlamalı. "Boş şablonu doldur" ile örneğe bakın.</div>`; return }
+    const missing=["baslik","kapi","ekip"].filter(k=>!String(c.f[k]||"").trim());
+    if(missing.length){ out.innerHTML=`<div class="err">Eksik alan: ${missing.join(", ")}.</div>`; return }
+    if(!/^(Tek|Çift) yönlü$/i.test(c.f.kapi)){ out.innerHTML=`<div class="err">kapi alanı "Tek yönlü" veya "Çift yönlü" olmalı.</div>`; return }
+    if(c.f.tur==="Hafıza" && (!c.f.hedef_dosya || !ekleBlock(c.body))){ out.innerHTML=`<div class="err">Hafıza kartında hedef_dosya alanı ve \`\`\`ekle etiketli kod bloğu olmalı.</div>`; return }
+    if(c.f.tur==="Hafıza" && !S.tree.some(t=>t.path===c.f.hedef_dosya)){ out.innerHTML=`<div class="err">hedef_dosya depoda yok: ${esc(c.f.hedef_dosya)}</div>`; return }
+    const taken = id => S.tree.some(t=>t.path===`onaylar/${id}.md`);
+    if(!c.f.id || !/^ONR-\d{4}-\d{3}$/.test(c.f.id) || taken(c.f.id)) c.f.id=nextId();
+    c.f.durum="Onay bekliyor"; c.f.onaylayanlar=[]; c.f.kurul_notu="";
+    c.f.olusturma=c.f.olusturma&&/^\d{4}-\d\d-\d\d$/.test(c.f.olusturma)?c.f.olusturma:today();
+    if(!/^\d{4}-\d\d-\d\d$/.test(c.f.son_tarih||"")) c.f.son_tarih = /^tek/i.test(c.f.kapi)?nextMonday():addDays(2);
+    for(const k of FIELD_ORDER) if(!(k in c.f)) c.f[k] = k==="ekler"?[]:(k==="maliyet_tl"?"0":"");
+    e.target.disabled=true;
+    try{ await putFile(`onaylar/${c.f.id}.md`, serializeCard(c), null, `pano: ${c.f.id} eklendi – ${c.f.baslik} (${uyeAd(S.me.login)})`); await loadCards(); toast(`${c.f.id} panoya eklendi.`); location.hash="#kart/"+c.f.id }
+    catch(err){ e.target.disabled=false; out.innerHTML=`<div class="err">Eklenemedi: ${esc(err.message)}</div>` }
+  };
+}
+
+/* ---------- Giriş ---------- */
+function viewLogin(errText){
+  document.title="Beyin Paneli";
+  $("#app").innerHTML = `<div class="wrap"><div class="login">
+    <h1>Beyin Paneli</h1><p class="lede">Şirketin onay panosu, raporları ve ajan dosyaları. Kendi GitHub hesabınızla bağlanın; onaylarınız sizin adınızla kaydedilir.</p>
+    ${errText?`<div class="err">${esc(errText)}</div>`:""}
+    <form id="lf">
+      <label class="f" for="repo">Depo</label><p class="f-help">GitHub kullanıcı adı / depo adı</p>
+      <input class="t" id="repo" required placeholder="kullaniciadi/isletme-beyni" value="${esc(store.get("bp_repo")||new URLSearchParams(location.search).get("depo")||"")}" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <label class="f" for="tok">Erişim anahtarı</label>
+      <p class="f-help">GitHub → Settings → Developer settings → <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained token</a>. Yalnızca bu depo; izin: Contents → Read and write. Anahtar yalnızca bu cihazda saklanır.</p>
+      <input class="t" id="tok" type="password" required placeholder="github_pat_…" autocomplete="off">
+      <p><button class="btn dark" type="submit" style="width:100%;margin-top:14px">Bağlan</button></p>
+    </form></div></div>`;
+  $("#lf").onsubmit = async e=>{
+    e.preventDefault(); const b=e.submitter||$("#lf button"); b.disabled=true; b.textContent="Bağlanıyor…";
+    S.repo=$("#repo").value.trim().replace(/^https:\/\/github\.com\//,"").replace(/\/$/,""); S.token=$("#tok").value.trim();
+    try{ await loadAll(); store.set("bp_repo",S.repo); store.set("bp_token",S.token); route() }
+    catch(err){ viewLogin(err.status===401?"Anahtar geçersiz veya süresi dolmuş.":err.status===404?"Depo bulunamadı ya da anahtarın bu depoya erişimi yok.":"Bağlanılamadı: "+err.message) }
+  };
+}
+
+/* ---------- Yönlendirme ---------- */
+function render(tab, inner){
+  $("#app").innerHTML = shell(tab, inner);
+  $("#logout").onclick=()=>{ store.del("bp_token"); S.token=null; S.cache={}; location.hash=""; viewLogin() };
+  window.scrollTo(0,0);
+}
+let tt; function toast(m){ document.querySelectorAll(".toast").forEach(x=>x.remove()); const d=document.createElement("div"); d.className="toast"; d.setAttribute("role","status"); d.textContent=m; document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),3500) }
+async function route(){
+  if(!S.token || !S.me){ viewLogin(); return }
+  const h = decodeURIComponent(location.hash.slice(1)||"pano");
+  const [k,...rest] = h.split("/"); const arg = rest.join("/");
+  try{
+    if(k==="kart") return viewKart(arg);
+    if(k==="raporlar") return viewRaporlar();
+    if(k==="rapor") return viewDosya(arg,"raporlar","#raporlar","Raporlar");
+    if(k==="ajanlar") return viewAjanlar();
+    if(k==="ajan"){ const m=arg.match(/^(.*?)(?:\/(gorev|hafiza|ciktilar))?$/); return viewAjan(m[1], m[2]) }
+    if(k==="beyin") return viewBeyin();
+    if(k==="dosya") return viewDosya(arg,"beyin","#beyin","Beyin");
+    if(k==="yeni") return viewYeni();
+    return viewPano();
+  }catch(err){ render("pano", `<div class="err">${esc(err.message)}</div>`) }
+}
+window.addEventListener("hashchange", route);
+(async()=>{
+  S.repo=store.get("bp_repo"); S.token=store.get("bp_token");
+  if(S.repo && S.token){ try{ await loadAll() }catch(err){ S.me=null; viewLogin(err.status===401?"Anahtarın süresi dolmuş; yenisini girin.":"Bağlanılamadı: "+err.message); return } }
+  route();
+})();
+</script>
+</body>
+</html>
