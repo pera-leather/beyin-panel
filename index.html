@@ -191,6 +191,26 @@ async function getFile(path, fresh=false){
   const f = { path, sha:j.sha, text: j.content!=null ? b64dec(j.content) : null, size:j.size };
   S.cache[path]=f; return f;
 }
+/* Görseller (özel depo: yetkili istekle indirilir, tarayıcıda blob adresi olur) */
+const BLOB={};
+async function blobUrl(path){
+  if(BLOB[path]) return BLOB[path];
+  const r = await fetch(API+`/repos/${S.repo}/contents/${encPath(path)}?ref=${encodeURIComponent(S.branch)}`, {headers:{"Accept":"application/vnd.github.raw","Authorization":"Bearer "+S.token}});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return BLOB[path] = URL.createObjectURL(await r.blob());
+}
+function cozYol(baz, rel){
+  if(/^(https?:|data:|blob:|#|mailto:)/.test(rel)) return null;
+  const parca = (rel.startsWith("/") ? rel.slice(1) : baz.split("/").slice(0,-1).concat(rel.split("/")).join("/")).split("/");
+  const out=[]; for(const x of parca){ if(x===".."||x==="") { if(x==="..") out.pop(); } else if(x!==".") out.push(x) }
+  return decodeURIComponent(out.join("/"));
+}
+async function gorselleriCoz(kok, bazYol){
+  await Promise.all([...kok.querySelectorAll("img[src]")].map(async im=>{
+    const y = cozYol(bazYol, im.getAttribute("src")); if(!y) return;
+    try{ im.src = await blobUrl(y) }catch(e){ im.alt = "(görsel açılamadı: "+y+")" }
+  }));
+}
 async function putFile(path, text, sha, message){
   const body = { message, content:b64enc(text), branch:S.branch }; if(sha) body.sha=sha;
   const j = await gh(`/repos/${S.repo}/contents/${encPath(path)}`, {method:"PUT", body:JSON.stringify(body)});
@@ -258,7 +278,7 @@ async function loadCards(){
 }
 
 /* ---------- Görünümler ---------- */
-const TABS=[["pano","Pano"],["raporlar","Raporlar"],["ajanlar","Ajanlar"],["beyin","Beyin"],["yeni","Yeni öneri"]];
+const TABS=[["pano","Pano"],["sunum","Sunum"],["raporlar","Raporlar"],["ajanlar","Ajanlar"],["beyin","Beyin"],["yeni","Yeni öneri"]];
 function shell(active, inner){
   const pending = S.cards.filter(c=>c.f.durum==="Onay bekliyor" && !arr(c.f.onaylayanlar).includes(S.me.login)).length;
   return `<header class="top"><div class="wrap">
@@ -295,8 +315,10 @@ async function viewPano(){
   const red = S.cards.filter(c=>/Reddedildi|Geri gönderildi/.test(c.f.durum)).slice(0,10);
   const ark = S.cards.filter(c=>/Uygulandı|Süresi doldu/.test(c.f.durum)).slice(0,10);
   let ceo="";
+  const sn = sunumlar()[0];
+  if(sn) ceo += `<a class="ceo card" href="#sunum/${encodeURIComponent(sn)}"><div class="k">Son kurul sunumu · ${esc(sn.split("/")[1])}</div><div class="md"><p>CEO'nun görsel sunumu: kararlar, gerekçeler, ürünler, logo, reklamlar, site. Açmak için dokunun.</p></div></a>`;
   const cp = latestCeo();
-  if(cp){ try{ const f=await getFile(cp); ceo=`<a class="ceo card" href="#rapor/${encodeURIComponent(cp)}"><div class="k">CEO'nun son notu · ${esc(cp.split("/").pop().replace(".md",""))}</div><div class="md">${md(f.text)}</div></a>` }catch(e){} }
+  if(cp){ try{ const f=await getFile(cp); ceo+=`<a class="ceo card" href="#rapor/${encodeURIComponent(cp)}"><div class="k">CEO'nun son notu · ${esc(cp.split("/").pop().replace(".md",""))}</div><div class="md">${md(f.text)}</div></a>` }catch(e){} }
   render("pano", `<div class="page-h"><h1>Onay panosu</h1><button class="btn" id="refresh" type="button">Yenile</button></div>
     <p class="lede">Ajanların önerileri burada sizi bekler. Onaylamadığınız hiçbir şey uygulanmaz, hiçbir hafızaya eklenmez.</p>
     ${ceo}
@@ -379,14 +401,15 @@ async function decideCard(path, kind, note){
 /* Raporlar */
 function rapSort(a,b){ const ka=(a.match(/ciktilar\/([^/]+)\//)||[])[1]||"", kb=(b.match(/ciktilar\/([^/]+)\//)||[])[1]||""; return kb.localeCompare(ka) || b.split("/").pop().localeCompare(a.split("/").pop()) }
 const RF = {"Tümü":()=>true,"CEO notları":n=>/^(CEO|DIR)-/.test(n),"Ekip raporları":n=>/^EKP-/.test(n),"Kurmay":n=>/^(KRB|DNT|OGR)-/.test(n),"Diğer":n=>!/^(CEO|DIR|EKP|KRB|DNT|OGR)-/.test(n)};
+function rapAd(p){ const n=p.split("/").pop().replace(/\.md$/,""); if(n!=="RAPOR") return n; const ust=p.split("/").slice(-2,-1)[0]; return /^\d{4}-\d{2}-\d{2}$/.test(ust) ? ajanOf(p) : ust }
 function ajanOf(p){ const m=p.match(/^organizasyon\/(.+)\/ciktilar\//); return m?m[1].split("/").pop():"" }
 function viewRaporlar(){
-  const all = S.tree.map(x=>x.path).filter(p=>/\/ciktilar\/.+\.md$/.test(p)).sort(rapSort);
+  const all = S.tree.map(x=>x.path).filter(p=>/\/ciktilar\/.+\.md$/.test(p) && !/\/(ekler|gorseller)\//.test(p)).sort(rapSort);
   const list = all.filter(p=>RF[S.raporFiltre](p.split("/").pop()));
   render("raporlar", `<div class="page-h"><h1>Raporlar</h1></div>
     <p class="lede">Ajanların ürettiği her not ve rapor, en yeniden eskiye.</p>
     <div class="chips" role="group" aria-label="Rapor türü">${Object.keys(RF).map(k=>`<button type="button" class="chip" aria-pressed="${k===S.raporFiltre}" data-k="${esc(k)}">${esc(k)}</button>`).join("")}</div>
-    ${list.length?`<div class="list">${list.map(p=>`<a href="#rapor/${encodeURIComponent(p)}"><span>${esc(p.split("/").pop().replace(/\.md$/,""))}</span><span class="s">${esc(ajanOf(p))} · ${esc((p.match(/ciktilar\/([^/]+)\//)||[])[1]||"")}</span></a>`).join("")}</div>`:`<div class="empty">Bu türde rapor yok. Ajanlar raporlarını kendi klasörlerinin ciktilar/YYYY-AA/ altına yazdıkça burada görünür.</div>`}`);
+    ${list.length?`<div class="list">${list.map(p=>`<a href="#rapor/${encodeURIComponent(p)}"><span>${esc(rapAd(p))}</span><span class="s">${esc(ajanOf(p))} · ${esc((p.match(/ciktilar\/([^/]+)\//)||[])[1]||"")}</span></a>`).join("")}</div>`:`<div class="empty">Bu türde rapor yok. Ajanlar raporlarını kendi klasörlerinin ciktilar/YYYY-AA/ altına yazdıkça burada görünür.</div>`}`);
   document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ S.raporFiltre=b.dataset.k; viewRaporlar() });
 }
 
@@ -402,6 +425,23 @@ async function viewDosya(path, tab, backHref, backLabel){
     <article class="reader"><div class="page-h" style="margin-bottom:10px"><span class="idtag">${esc(path)}</span>${isText&&S.canPush?`<button class="btn" id="edit" type="button">Düzenle</button>`:""}</div>${body}
     <p style="margin:18px 0 0;font-size:14px"><a href="https://github.com/${S.repo}/commits/${S.branch}/${encPath(path)}" target="_blank" rel="noopener">Değişiklik geçmişi</a></p></article>`);
   $("#edit") && ($("#edit").onclick=()=>editFile(path, tab, backHref, backLabel));
+  if(isMd){ const k=document.querySelector(".reader .md"); if(k){ await gorselleriCoz(k, path); k.querySelectorAll("a[href]").forEach(a=>{ const y=cozYol(path,a.getAttribute("href")); if(y && S.tree.some(t=>t.path===y)) a.href="#rapor/"+encodeURIComponent(y) }) } }
+}
+
+/* Sunum: CEO'nun görsel kurul sunumları (sunum/<tarih>/index.html) */
+function sunumlar(){ return S.tree.map(x=>x.path).filter(p=>/^sunum\/[^/]+\/index\.html$/.test(p)).sort().reverse() }
+async function viewSunum(arg){
+  const list = sunumlar();
+  const yol = arg || list[0];
+  if(!yol){ render("sunum", `<div class="page-h"><h1>Sunum</h1></div><div class="empty">Henüz sunum yok. CEO her tam turun sonunda buraya görsel bir kurul sunumu koyar.</div>`); return }
+  render("sunum", `<div class="page-h"><h1>Sunum</h1>${list.length>1?`<select id="sec" class="t" style="max-width:220px">${list.map(p=>`<option value="${esc(p)}" ${p===yol?"selected":""}>${esc(p.split("/")[1])}</option>`).join("")}</select>`:""}</div><p class="loading">Sunum yükleniyor (görseller indiriliyor)…</p><iframe id="sf" title="Kurul sunumu" style="width:100%;border:0;min-height:80vh;display:none" sandbox="allow-same-origin allow-popups allow-top-navigation-by-user-activation"></iframe>`);
+  $("#sec") && ($("#sec").onchange=e=>location.hash="#sunum/"+encodeURIComponent(e.target.value));
+  const f = await getFile(yol);
+  const doc = new DOMParser().parseFromString(f.text||"", "text/html");
+  await gorselleriCoz(doc, yol);
+  doc.querySelectorAll("a[href]").forEach(a=>{ const y=cozYol(yol,a.getAttribute("href")); if(y && S.tree.some(t=>t.path===y)){ a.href=location.href.split("#")[0]+"#rapor/"+encodeURIComponent(y); a.target="_top" } });
+  const fr=$("#sf"); fr.srcdoc="<!doctype html>"+doc.documentElement.outerHTML;
+  fr.onload=()=>{ document.querySelector(".loading")?.remove(); fr.style.display="block"; const boy=()=>{ try{ fr.style.height=(fr.contentDocument.documentElement.scrollHeight+20)+"px" }catch(e){} }; boy(); setTimeout(boy,1500); setTimeout(boy,4000) };
 }
 async function editFile(path, tab, backHref, backLabel){
   const f = await getFile(path, true);
@@ -554,6 +594,7 @@ async function route(){
   const [k,...rest] = h.split("/"); const arg = rest.join("/");
   try{
     if(k==="kart") return viewKart(arg);
+    if(k==="sunum") return viewSunum(arg);
     if(k==="raporlar") return viewRaporlar();
     if(k==="rapor") return viewDosya(arg,"raporlar","#raporlar","Raporlar");
     if(k==="ajanlar") return viewAjanlar();
